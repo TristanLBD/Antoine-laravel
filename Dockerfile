@@ -1,3 +1,13 @@
+# Stage 1 : build des assets front (Vite) avec Node
+FROM node:20-bookworm-slim AS nodebuilder
+WORKDIR /var/www/html
+COPY package.json ./
+COPY resources ./resources
+COPY public ./public
+COPY vite.config.js ./
+RUN npm install && npm run build
+
+# Stage 2 : application Laravel (PHP + Nginx)
 FROM php:8.2-fpm-bookworm
 
 # Dépendances système
@@ -28,20 +38,16 @@ RUN docker-php-ext-install \
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Node pour build des assets
-COPY --from=node:20-bookworm-slim /usr/local/bin/node /usr/local/bin/node
-COPY --from=node:20-bookworm-slim /usr/local/bin/npm /usr/local/bin/npm
-
 WORKDIR /var/www/html
 
 # Copie de l'application (sans vendor, géré par composer install)
 COPY . .
 
+# Récupération des assets buildés depuis le stage Node
+COPY --from=nodebuilder /var/www/html/public/build ./public/build
+
 # Installation des dépendances PHP (sans dev en prod, on garde dev pour artisan)
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
-
-# Build des assets front (Vite)
-RUN npm install && npm run build
 
 # Permissions
 RUN chown -R www-data:www-data /var/www/html \
