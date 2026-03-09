@@ -23,7 +23,6 @@ services:
       - DB_PASSWORD=secret
     volumes:
       - .:/var/www/html
-      - /var/www/html/vendor
     depends_on:
       mysql:
         condition: service_healthy
